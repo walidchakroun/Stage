@@ -2,33 +2,6 @@ version: "3.8"
 
 services:
 
-  # MySQL for Spring Boot app
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: ""       # matches your Spring Boot config
-      MYSQL_DATABASE: coursclassroom
-    ports:
-      - "3306:3306"
-    healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Spring Boot App
-  stage-app:
-    image: walidchakroun/stage:latest
-    ports:
-      - "6000:8089"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/coursclassroom?createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ""
-    depends_on:
-      mysql:
-        condition: service_healthy
 
   # Prometheus
   prometheus:
