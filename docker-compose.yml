@@ -3,6 +3,10 @@ version: "3.8"
 services:
 
 
+
+
+
+
   # Prometheus
   prometheus:
     image: prom/prometheus:latest
