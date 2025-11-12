@@ -226,6 +226,8 @@ pipeline {
                     to: "walid.chakroun21@gmail.com",
                 )
         }
+
+        
         failure {
             // This runs only if the pipeline failed.
             emailext(
