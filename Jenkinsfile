@@ -213,24 +213,37 @@ pipeline {
 // --- Add the Post-Build Notification Section ---
     post {
         always {
-            // This runs after the pipeline completes, regardless of success or failure.
-            echo 'Pipeline finished. Checking status for email...'
+            archiveArtifacts artifacts: 'trivy_repo_report.json', allowEmptyArchive: true
         }
         success {
             // This runs only if the pipeline finished with success.
-            mail(
-                to: 'walid.chakroun21@gmail.com', // Replace with the actual recipient
-                subject: "✅ SUCCESS: Pipeline ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-                body: "The build for ${env.JOB_NAME} completed successfully.\nView details here: ${env.BUILD_URL}"
-            )
+            emailext(
+                    subject: "✅ Pipeline SUCCESS: ${currentBuild.fullDisplayName}",
+                    body: """Hello Team,
+                    The pipeline failed. Check the attached Trivy report for details.
+                    Build URL: ${env.BUILD_URL}
+                    """,
+                    to: "walid.chakroun21@gmail.com",
+
+                    // Attach the file using its name relative to the current workspace root.
+                    // This is the most reliable way.
+                    attachmentsPattern: 'trivy_repo_report.json'
+                )
         }
         failure {
             // This runs only if the pipeline failed.
-            mail(
-                to: 'walid.chakroun21@gmail.com', // Multiple recipients separated by comma
-                subject: "❌ FAILURE: Pipeline ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-                body: "The build failed! Please check the console output.\nView details here: ${env.BUILD_URL}"
-            )
+            emailext(
+                    subject: "❌ Pipeline FAILED: ${currentBuild.fullDisplayName}",
+                    body: """Hello Team,
+                    The pipeline failed. Check the attached Trivy report for details.
+                    Build URL: ${env.BUILD_URL}
+                    """,
+                    to: "walid.chakroun21@gmail.com",
+
+                    // Attach the file using its name relative to the current workspace root.
+                    // This is the most reliable way.
+                    attachmentsPattern: 'trivy_repo_report.json'
+                )
         }
         // You can also use 'unstable', 'fixed', 'aborted', etc.
     }
