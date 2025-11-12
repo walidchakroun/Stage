@@ -221,11 +221,9 @@ pipeline {
             emailext(
                 subject: "✅ Pipeline SUCCESS: ${currentBuild.fullDisplayName}",
                 body: """Hello Team,
-
-The pipeline has completed successfully.
-
-Build URL: ${env.BUILD_URL}
-""",
+                The pipeline has completed successfully.
+                Build URL: ${env.BUILD_URL}
+                """,
                 to: "walid.chakroun21@gmail.com"
             )
         }
@@ -234,13 +232,12 @@ Build URL: ${env.BUILD_URL}
             emailext(
                 subject: "❌ Pipeline FAILED: ${currentBuild.fullDisplayName}",
                 body: """Hello Team,
+                The pipeline failed due to critical vulnerabilities, test failures, or security issues.
 
-The pipeline failed due to critical vulnerabilities, test failures, or security issues.
+                Check Jenkins artifacts and console output for details.
 
-Check Jenkins artifacts and console output for details.
-
-Build URL: ${env.BUILD_URL}
-""",
+                Build URL: ${env.BUILD_URL}
+                """,
                 to: "walid.chakroun21@gmail.com"
             )
 
