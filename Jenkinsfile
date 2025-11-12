@@ -224,10 +224,6 @@ pipeline {
                     Build URL: ${env.BUILD_URL}
                     """,
                     to: "walid.chakroun21@gmail.com",
-
-                    // Attach the file using its name relative to the current workspace root.
-                    // This is the most reliable way.
-                    attachmentsPattern: 'trivy_repo_report.json'
                 )
         }
         failure {
