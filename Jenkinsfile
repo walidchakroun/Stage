@@ -59,15 +59,15 @@ pipeline {
             }
         }
 
-        stage('Pre-Pull Docker Images') {
-            steps {
-                echo 'Ensuring required docker images are present locally...'
-                // Use 'docker pull' to cache the images
-                sh 'docker pull aquasec/trivy:latest'
-                sh 'docker pull realguess/jq:latest'
-                echo 'Images are pulled and ready for use.'
-            }
-        }
+//        stage('Pre-Pull Docker Images') {
+//            steps {
+//                echo 'Ensuring required docker images are present locally...'
+//                // Use 'docker pull' to cache the images
+//                sh 'docker pull aquasec/trivy:latest'
+//                sh 'docker pull realguess/jq:latest'
+//                echo 'Images are pulled and ready for use.'
+//            }
+//        }
 
         stage('Dependency Scan (SCA - Trivy via Docker)') {
             steps {
