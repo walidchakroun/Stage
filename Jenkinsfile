@@ -116,33 +116,33 @@ pipeline {
                 '''
 
                 // Optional parsing logic (commented out)
-                // script {
-                //     def report = readJSON file: '/var/lib/jenkins/workspace/Test/trivy_repo_report.json'
-                //     def criticalVulns = []
+                 script {
+                     def report = readJSON file: '/var/lib/jenkins/workspace/Test/trivy_repo_report.json'
+                     def criticalVulns = []
 
-                //     if (report instanceof Map && report.containsKey('Results')) {
-                //         report = report.Results
-                //     }
+                     if (report instanceof Map && report.containsKey('Results')) {
+                         report = report.Results
+                     }
 
-                //     if (report instanceof List) {
-                //         for (item in report) {
-                //             if (item.containsKey('Vulnerabilities') && item.Vulnerabilities) {
-                //                 criticalVulns.addAll(
-                //                     item.Vulnerabilities.findAll { v ->
-                //                         v.Severity in ['HIGH', 'CRITICAL']
-                //                     }
-                //                 )
-                //             }
-                //         }
-                //     }
+                     if (report instanceof List) {
+                         for (item in report) {
+                             if (item.containsKey('Vulnerabilities') && item.Vulnerabilities) {
+                                 criticalVulns.addAll(
+                                     item.Vulnerabilities.findAll { v ->
+                                         v.Severity in ['HIGH', 'CRITICAL']
+                                     }
+                                 )
+                             }
+                         }
+                     }
 
-                //     if (criticalVulns.size() > 0) {
-                //         echo "❌ Critical or high vulnerabilities found: ${criticalVulns.size()}"
-                //         error("Halting pipeline due to critical vulnerabilities.")
-                //     } else {
-                //         echo "✅ No critical vulnerabilities found in repository scan."
-                //     }
-                // }
+                     if (criticalVulns.size() > 0) {
+                         echo "❌ Critical or high vulnerabilities found: ${criticalVulns.size()}"
+                         error("Halting pipeline due to critical vulnerabilities.")
+                     } else {
+                         echo "✅ No critical vulnerabilities found in repository scan."
+                     }
+                 }
             }
         }
 
@@ -220,14 +220,16 @@ pipeline {
             emailext(
                     subject: "✅ Pipeline SUCCESS: ${currentBuild.fullDisplayName}",
                     body: """Hello Team,
-                    The pipeline failed. Check the attached Trivy report for details.
+                    The pipeline **completed successfully**!
+        
                     Build URL: ${env.BUILD_URL}
                     """,
-                    to: "walid.chakroun21@gmail.com",
+                    to: "walid.chakroun21@gmail.com"
+                    // NOTE: I recommend removing the attachmentsPattern from 'success'
                 )
         }
 
-        
+
         failure {
             // This runs only if the pipeline failed.
             emailext(
