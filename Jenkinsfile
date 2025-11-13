@@ -59,43 +59,57 @@ pipeline {
             }
         }
 
+        stage('Pre-Pull Docker Images') {
+            steps {
+                echo 'Ensuring required docker images are present locally...'
+                // Use 'docker pull' to cache the images
+                sh 'docker pull aquasec/trivy:latest'
+                sh 'docker pull realguess/jq:latest'
+                echo 'Images are pulled and ready for use.'
+            }
+        }
+
         stage('Dependency Scan (SCA - Trivy via Docker)') {
             steps {
                 script {
-                    // 1. Run Trivy SCA Scan
-                    sh '''
-                        docker run --rm \
-                            -v $WORKSPACE:/app \
-                            -w /app \
-                            aquasec/trivy:latest \
-                            fs --severity HIGH,CRITICAL \
-                            --format json \
-                            --output trivy-sca-report.json . || true
-                    '''
+                    // 1. Setup Cache Directory
+                    sh 'mkdir -p $WORKSPACE/.trivy-cache'
 
-                    // 2. Display formatted vulnerability report
+                    // 2. Run Trivy SCA Scan - FIX APPLIED HERE
                     sh '''
-                        echo "--- TRIVY VULNERABILITY REPORT (HIGH/CRITICAL) ---"
-                        docker run --rm \
-                            -v $WORKSPACE:/app \
-                            -w /app \
-                            realguess/jq:latest \
-                            jq -r '
-                                .Results[] | select(.Vulnerabilities) | {
-                                    Target: .Target,
-                                    Vulnerabilities: [
-                                        .Vulnerabilities[]
-                                        | select(.Severity == "CRITICAL" or .Severity == "HIGH")
-                                        | {
-                                            Severity: .Severity,
-                                            VulnerabilityID: .VulnerabilityID,
-                                            PkgName: .PkgName,
-                                            InstalledVersion: .InstalledVersion
-                                        }
-                                    ]
+                docker run --rm \
+                    -v $WORKSPACE:/app \
+                    -v $WORKSPACE/.trivy-cache:/root/.cache/ \
+                    -w /app \
+                    aquasec/trivy:latest \
+                    fs --severity HIGH,CRITICAL \
+                    --format json \
+                    --output trivy-sca-report.json . || true
+            '''
+
+                    // 3. Display formatted vulnerability report
+                    sh '''
+                echo "--- TRIVY VULNERABILITY REPORT (HIGH/CRITICAL) ---"
+                docker run --rm \
+                    -v $WORKSPACE:/app \
+                    -w /app \
+                    realguess/jq:latest \
+                    jq -r '
+                        .Results[] | select(.Vulnerabilities) | {
+                            Target: .Target,
+                            Vulnerabilities: [
+                                .Vulnerabilities[]
+                                | select(.Severity == "CRITICAL" or .Severity == "HIGH")
+                                | {
+                                    Severity: .Severity,
+                                    VulnerabilityID: .VulnerabilityID,
+                                    PkgName: .PkgName,
+                                    InstalledVersion: .InstalledVersion
                                 }
-                            ' trivy-sca-report.json
-                    '''
+                            ]
+                        }
+                    ' trivy-sca-report.json
+            '''
 
                     echo '✅ Trivy SCA scan completed. Check the results above.'
                 }
@@ -115,34 +129,34 @@ pipeline {
                         --severity HIGH,CRITICAL
                 '''
 
-                // Optional parsing logic (commented out)
-                 script {
-                     def report = readJSON file: '/var/lib/jenkins/workspace/Test/trivy_repo_report.json'
-                     def criticalVulns = []
-
-                     if (report instanceof Map && report.containsKey('Results')) {
-                         report = report.Results
-                     }
-
-                     if (report instanceof List) {
-                         for (item in report) {
-                             if (item.containsKey('Vulnerabilities') && item.Vulnerabilities) {
-                                 criticalVulns.addAll(
-                                     item.Vulnerabilities.findAll { v ->
-                                         v.Severity in ['HIGH', 'CRITICAL']
-                                     }
-                                 )
-                             }
-                         }
-                     }
-
-                     if (criticalVulns.size() > 0) {
-                         echo "❌ Critical or high vulnerabilities found: ${criticalVulns.size()}"
-                         error("Halting pipeline due to critical vulnerabilities.")
-                     } else {
-                         echo "✅ No critical vulnerabilities found in repository scan."
-                     }
-                 }
+//                 Optional parsing logic (commented out)
+//                 script {
+//                     def report = readJSON file: '/var/lib/jenkins/workspace/Test/trivy_repo_report.json'
+//                     def criticalVulns = []
+//
+//                     if (report instanceof Map && report.containsKey('Results')) {
+//                         report = report.Results
+//                     }
+//
+//                     if (report instanceof List) {
+//                         for (item in report) {
+//                             if (item.containsKey('Vulnerabilities') && item.Vulnerabilities) {
+//                                 criticalVulns.addAll(
+//                                     item.Vulnerabilities.findAll { v ->
+//                                         v.Severity in ['HIGH', 'CRITICAL']
+//                                     }
+//                                 )
+//                             }
+//                         }
+//                     }
+//
+//                     if (criticalVulns.size() > 0) {
+//                         echo "❌ Critical or high vulnerabilities found: ${criticalVulns.size()}"
+//                         error("Halting pipeline due to critical vulnerabilities.")
+//                     } else {
+//                         echo "✅ No critical vulnerabilities found in repository scan."
+//                     }
+//                 }
             }
         }
 
