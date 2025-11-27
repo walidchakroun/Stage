@@ -227,38 +227,126 @@ pipeline {
 // --- Add the Post-Build Notification Section ---
     post {
         always {
+            echo "📦 Archiving Trivy results..."
             archiveArtifacts artifacts: 'trivy_repo_report.json', allowEmptyArchive: true
-        }
-        success {
-            // This runs only if the pipeline finished with success.
-            emailext(
-                    subject: "✅ Pipeline SUCCESS: ${currentBuild.fullDisplayName}",
-                    body: """Hello Team,
-                    The pipeline **completed successfully**!
-        
-                    Build URL: ${env.BUILD_URL}
-                    """,
-                    to: "walid.chakroun21@gmail.com"
-                    // NOTE: I recommend removing the attachmentsPattern from 'success'
-                )
+
+            // If you plan to publish HTML or JSON visually later
+            publishHTML(target: [
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: '.',
+                    reportFiles: 'trivy_repo_report.json',
+                    reportName: 'Trivy FS Report'
+            ])
         }
 
+        success {
+            script {
+                // Extract HIGH + CRITICAL counts from Trivy JSON
+                def trivyHigh = sh(
+                        script: "grep -c '\"Severity\": \"HIGH\"' trivy_repo_report.json || true",
+                        returnStdout: true
+                ).trim()
+
+                def trivyCrit = sh(
+                        script: "grep -c '\"Severity\": \"CRITICAL\"' trivy_repo_report.json || true",
+                        returnStdout: true
+                ).trim()
+
+                emailext(
+                        subject: "✅ Pipeline SUCCESS — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+
+                        to: "walid.chakroun21@gmail.com",
+                        mimeType: "text/html",
+
+                        attachmentsPattern: "trivy_repo_report.json",
+
+                        body: """
+                <html>
+                <body style="font-family:Segoe UI, sans-serif; background:#f6f6f6; padding:20px;">
+                    <div style="max-width:700px; margin:auto; background:white; padding:25px; 
+                                border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+
+                        <h2 style="color:#2e7d32;">✅ Pipeline Successful</h2>
+                        <p>
+                            <b>Project:</b> ${env.JOB_NAME}<br>
+                            <b>Build #:</b> ${env.BUILD_NUMBER}<br>
+                            <b>Time:</b> ${new Date().format("yyyy-MM-dd HH:mm:ss",
+                                TimeZone.getTimeZone('Europe/Paris'))}<br>
+                        </p>
+
+                        <hr>
+
+                        <h3>📊 Trivy Security Summary</h3>
+                        <table style="width:100%; border-collapse:collapse;">
+                            <tr><th align="left">Severity</th><th align="center">Count</th></tr>
+                            <tr><td>HIGH</td><td align="center">${trivyHigh}</td></tr>
+                            <tr><td>CRITICAL</td><td align="center">${trivyCrit}</td></tr>
+                        </table>
+
+                        <hr>
+
+                        <h4>📁 Reports</h4>
+                        <p>
+                            <a href="${env.BUILD_URL}artifact/trivy_repo_report.json" 
+                               style="color:#1a73e8;">Download Trivy Report</a>
+                        </p>
+
+                        <hr>
+
+                        <p style="text-align:center; color:#666; font-size:12px;">
+                            🔒 Generated automatically by Jenkins DevSecOps Pipeline.
+                        </p>
+                    </div>
+                </body>
+                </html>
+                """
+                )
+            }
+        }
 
         failure {
-            // This runs only if the pipeline failed.
             emailext(
-                    subject: "❌ Pipeline FAILED: ${currentBuild.fullDisplayName}",
-                    body: """Hello Team,
-                    The pipeline failed. Check the attached Trivy report for details.
-                    Build URL: ${env.BUILD_URL}
-                    """,
-                    to: "walid.chakroun21@gmail.com",
+                    subject: "❌ Pipeline FAILED — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
 
-                    // Attach the file using its name relative to the current workspace root.
-                    // This is the most reliable way.
-                    attachmentsPattern: 'trivy_repo_report.json'
-                )
+                    to: "walid.chakroun21@gmail.com",
+                    mimeType: "text/html",
+
+                    attachmentsPattern: "trivy_repo_report.json",
+
+                    body: """
+            <html>
+            <body style="font-family:Segoe UI, sans-serif; background:#fff0f0; padding:20px;">
+                <div style="max-width:700px; margin:auto; background:white; padding:25px; 
+                            border-radius:10px; box-shadow:0 2px 8px rgba(255,0,0,0.15);">
+
+                    <h2 style="color:#c62828;">❌ Pipeline Failed</h2>
+                    <p>
+                        <b>Project:</b> ${env.JOB_NAME}<br>
+                        <b>Build #:</b> ${env.BUILD_NUMBER}<br>
+                        <b>Time:</b> ${new Date().format("yyyy-MM-dd HH:mm:ss",
+                            TimeZone.getTimeZone('Europe/Paris'))}<br>
+                    </p>
+
+                    <hr>
+
+                    <p>
+                        ⚠️ The pipeline has failed.<br>
+                        Check the <a href="${env.BUILD_URL}console" 
+                        style="color:#d32f2f;">console logs</a> for details.
+                    </p>
+
+                    <hr>
+
+                    <p style="font-size:12px; color:#666; text-align:center;">
+                        📎 Trivy report attached for debugging. Stay secure!
+                    </p>
+                </div>
+            </body>
+            </html>
+            """
+            )
         }
-        // You can also use 'unstable', 'fixed', 'aborted', etc.
     }
 }
